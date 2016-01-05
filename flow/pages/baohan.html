@@ -283,8 +283,7 @@
 	<script src="../js/mui.min.js"></script>
 	<script>
 		var main, menu, mask = mui.createMask(_closeMenu);
-		var showMenu = false,
-			mode = 'main-move';
+		var showMenu = false;
 		//整体滑动暂不支持android手机，因为两个页面的移动动画，无法保证同步性；
 		if (!mui.os.android) {
 			//整体滑动暂不支持android手机，因为两个页面的移动动画，无法保证同步性；
@@ -295,8 +294,21 @@
 			}
 		}
 		mui.init({
-			swipeBack: true //启用右滑关闭功能
+			swipeBack: false,
+			beforeback: back //重写back
 		});
+
+		function back() {
+			if (showMenu) {
+				//菜单处于显示状态，返回键应该先关闭菜单,阻止主窗口执行mui.back逻辑；
+				closeMenu();
+				return false;
+			} else {
+				//菜单处于隐藏状态，执行返回时，要先close菜单页面，然后继续执行mui.back逻辑关闭主窗口；
+				menu.close('none');
+				return true;
+			}
+		}
 		//plusReady事件后，自动创建menu窗口；
 		mui.plusReady(function() {
 			main = plus.webview.currentWebview();
@@ -326,44 +338,20 @@
 				}
 				//侧滑菜单处于隐藏状态，则立即显示出来；
 				//显示完毕后，根据不同动画效果移动窗体；
-				menu.show('none', 0, function() {
-					switch (mode) {
-						case 'main-move':
-							//主窗体开始侧滑；
-							main.setStyle({
-								left: '-70%',
-								transition: {
-									duration: 150
-								}
-							});
-							break;
-						case 'menu-move':
-							menu.setStyle({
-								left: '30%',
-								transition: {
-									duration: 150
-								}
-							});
-							break;
-						case 'all-move':
-							main.setStyle({
-								left: '-70%',
-								transition: {
-									duration: 150
-								}
-							});
-							menu.setStyle({
-								left: '30%',
-								transition: {
-									duration: 150
-								}
-							});
-							break;
-					}
-				});
-				//显示主窗体遮罩
-				mask.show();
-				showMenu = true;
+				//主窗体开始侧滑；
+				if (menu != null) {
+					menu.show('none', 0, function() {
+						menu.setStyle({
+							left: '30%',
+							transition: {
+								duration: 150
+							}
+						});
+					});
+					//显示主窗体遮罩
+					mask.show();
+					showMenu = true;
+				}
 			}
 		}
 
@@ -384,42 +372,13 @@
 					//同时需要修改以下.mui-contnt的padding-top，否则会多出空白；
 					document.querySelector(".mui-bar-nav~.mui-content").style.paddingTop = "44px";
 				}
-				switch (mode) {
-					case 'main-move':
-						//主窗体开始侧滑；
-						main.setStyle({
-							left: '0',
-							transition: {
-								duration: 150
-							}
-						});
-						break;
-					case 'menu-move':
-						//主窗体开始侧滑；
-						menu.setStyle({
-							left: '100%',
-							transition: {
-								duration: 150
-							}
-						});
-						break;
-					case 'all-move':
-						//主窗体开始侧滑；
-						main.setStyle({
-							left: '0',
-							transition: {
-								duration: 150
-							}
-						});
-						//menu页面同时移动
-						menu.setStyle({
-							left: '100%',
-							transition: {
-								duration: 150
-							}
-						});
-						break;
-				}
+				//主窗体开始侧滑；
+				menu.setStyle({
+					left: '100%',
+					transition: {
+						duration: 150
+					}
+				});
 				//等窗体动画结束后，隐藏菜单webview，节省资源；
 				setTimeout(function() {
 					menu.hide();
@@ -427,6 +386,21 @@
 				showMenu = false;
 			}
 		}
+		document.getElementById("shai_xuan").addEventListener('tap', openMenu);
+		//在android4.4中的swipe事件，需要preventDefault一下，否则触发不正常
+		//故，在dragleft，dragright中preventDefault
+		window.addEventListener('dragright', function(e) {
+			e.detail.gesture.preventDefault();
+		});
+		window.addEventListener('dragleft', function(e) {
+			e.detail.gesture.preventDefault();
+		});
+		//主界面向左滑动，若菜单未显示，则显示菜单；否则不做任何操作；
+		window.addEventListener("swipeleft", openMenu);
+		//主界面向右滑动，若菜单已显示，则关闭菜单；否则，不做任何操作；
+		window.addEventListener("swiperight", closeMenu);
+		//menu页面向右滑动，关闭菜单；
+		window.addEventListener("menu:swiperight", closeMenu);
 		//重写mui.menu方法，Android版本menu按键按下可自动打开、关闭侧滑菜单；
 		mui.menu = function() {
 			if (showMenu) {
@@ -435,54 +409,54 @@
 				openMenu();
 			}
 		}
-		document.getElementById("shai_xuan").addEventListener('tap', openMenu);
-		(function($) {
-			mui('#flow-body').on('tap', 'li', function() {
+		
+		mui('#flow-body').on('tap', 'li', function() {
 				var id = this.getAttribute("id");
 				//mui("#bottomPopover").show();
 				mui("#bottomPopover").popover('toggle');
 				//$("#modal").toggle('mui-active');
 			});
+		(function($) {
 			$('.mui-pagination').on('tap', 'a', function() {
-				var li = this.parentNode;
-				var classList = li.classList;
-				if (!classList.contains('mui-active') && !classList.contains('mui-disabled')) {
-					var active = li.parentNode.querySelector('.mui-active');
-					if (classList.contains('mui-previous')) { //previous
-						if (active) {
-							var previous = active.previousElementSibling;
-							console.log('previous', previous);
-							if (previous && !previous.classList.contains('mui-previous')) {
-								$.trigger(previous.querySelector('a'), 'tap');
-							} else {
-								classList.add('mui-disabled');
+					var li = this.parentNode;
+					var classList = li.classList;
+					if (!classList.contains('mui-active') && !classList.contains('mui-disabled')) {
+						var active = li.parentNode.querySelector('.mui-active');
+						if (classList.contains('mui-previous')) {//previous
+							if (active) {
+								var previous = active.previousElementSibling;
+								console.log('previous', previous);
+								if (previous && !previous.classList.contains('mui-previous')) {
+									$.trigger(previous.querySelector('a'), 'tap');
+								} else {
+									classList.add('mui-disabled');
+								}
 							}
-						}
-					} else if (classList.contains('mui-next')) { //next
-						if (active) {
-							var next = active.nextElementSibling;
-							if (next && !next.classList.contains('mui-next')) {
-								$.trigger(next.querySelector('a'), 'tap');
-							} else {
-								classList.add('mui-disabled');
+						} else if (classList.contains('mui-next')) {//next
+							if (active) {
+								var next = active.nextElementSibling;
+								if (next && !next.classList.contains('mui-next')) {
+									$.trigger(next.querySelector('a'), 'tap');
+								} else {
+									classList.add('mui-disabled');
+								}
 							}
-						}
-					} else { //page
-						active.classList.remove('mui-active');
-						classList.add('mui-active');
-						var page = parseInt(this.innerText);
-						var previousPageElement = li.parentNode.querySelector('.mui-previous');
-						var nextPageElement = li.parentNode.querySelector('.mui-next');
-						previousPageElement.classList.remove('mui-disabled');
-						nextPageElement.classList.remove('mui-disabled');
-						if (page <= 1) {
-							previousPageElement.classList.add('mui-disabled');
-						} else if (page >= 5) {
-							nextPageElement.classList.add('mui-disabled');
+						} else {//page
+							active.classList.remove('mui-active');
+							classList.add('mui-active');
+							var page = parseInt(this.innerText);
+							var previousPageElement = li.parentNode.querySelector('.mui-previous');
+							var nextPageElement = li.parentNode.querySelector('.mui-next');
+							previousPageElement.classList.remove('mui-disabled');
+							nextPageElement.classList.remove('mui-disabled');
+							if (page <= 1) {
+								previousPageElement.classList.add('mui-disabled');
+							} else if (page >= 5) {
+								nextPageElement.classList.add('mui-disabled');
+							}
 						}
 					}
-				}
-			});
+				});
 		})(mui);
 	</script>
 
