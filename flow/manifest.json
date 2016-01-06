@@ -231,7 +231,8 @@
 				],
 				"refer": [
 					"pages/baohan-shai.html",
-					"pages/offcanvas-drag-left-plus-menu.html"
+					"pages/offcanvas-drag-left-plus-menu.html",
+					"pages/offcanvas-drag-right-plus-menu.html"
 				],
 				"priority": 0
 			},
@@ -311,7 +312,9 @@
 					"css/mui.min.css",
 					"css/mymui.css"
 				],
-				"refer": [],
+				"refer": [
+					"pages/baohan-shai.html"
+				],
 				"priority": 0
 			},
 			"pages/project.html": {
@@ -333,7 +336,9 @@
 					"css/mui.min.css",
 					"css/mymui.css"
 				],
-				"refer": [],
+				"refer": [
+					"pages/baohan-shai.html"
+				],
 				"priority": 0
 			},
 			"pages/notice.html": {
